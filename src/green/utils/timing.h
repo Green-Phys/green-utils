@@ -28,11 +28,8 @@ namespace green::utils {
   };
 
   void print_event(const std::string& name, const std::string& prefix, const event_t& event) {
-    double max = event.duration;
-    double min = event.duration;
-    double avg = event.duration;
     std::cout << prefix << "Event " << name << " took " << event.duration << " s." << std::endl;
-    for (auto child : event.children) {
+    for (auto& child : event.children) {
       print_event(child.first, prefix + "  ", *child.second);
     }
   }
@@ -53,7 +50,7 @@ namespace green::utils {
     if (!rank)
       std::cout << prefix << "Event " << name << " took max:" << max << " min: " << min << " avg: " << avg / size << " s."
                 << std::endl;
-    for (auto child : event.children) {
+    for (auto& child : event.children) {
       print_event(comm, rank, size, child.first, prefix + "  ", *child.second);
     }
   }
