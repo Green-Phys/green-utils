@@ -56,13 +56,30 @@ namespace green::utils {
   }
 
   /**
-   * @brief ExecutionStatistic class
+   * @brief timing class. measure time for user defined event in the code
    *
-   * @author iskakoff
    */
-  class execution_statistic_t {
+  class timing {
   public:
-    execution_statistic_t() = default;
+    /**
+     * Singleton pattern for time profiling object
+     * @return
+     */
+    static timing& get_instance() {
+      static timing instance;  // Guaranteed to be destroyed.
+                               // Instantiated on first use.
+      return instance;
+    }
+
+  public:
+    /**
+     * Default constructor is public for testing
+     */
+    timing()                      = default;
+
+    // Delete possibility of coping timing object
+    timing(timing const&)         = delete;
+    void operator=(timing const&) = delete;
 
     void add(const std::string& name) {
       if (_events.find(name) == _events.end()) {
@@ -71,9 +88,11 @@ namespace green::utils {
     }
 
     /**
-     * register the start point of the current frame for the event `name`
+     * register the start point for the current frame for the event `name`
+     * if called inside currently measured event, new event will be added as a child event into a current event.
+     * `_current_event` will be set to a newly started event.
      *
-     * @param name - event name
+     * @param name - event name to start time measurement
      */
     void start(const std::string& name) {
 #ifndef NDEBUG
@@ -93,7 +112,10 @@ namespace green::utils {
     }
 
     /**
-     * Update current event time
+     * Finish time measurement for current event and update its time.
+     * New value for `_current_event` will be set to its parent.
+     * For all root event parent is nullptr.
+     *
      */
     void end() {
       if (!_current_event) {
@@ -106,7 +128,7 @@ namespace green::utils {
     }
 
     /**
-     * Print all observed events
+     * Print statistics for all observed events
      */
     void print() {
       std::cout << "Execution statistics:" << std::endl;
@@ -116,6 +138,12 @@ namespace green::utils {
       std::cout << "=====================" << std::endl;
     }
 
+    /**
+     * Print statistics for all observed events. min, max and averaged time across all MPI processes within a given
+     * MPI communicator will be computed and printed.
+     *
+     * @param comm - MPI communicator
+     */
     void print(MPI_Comm comm) {
       int id, np;
       MPI_Comm_rank(comm, &id);
@@ -132,9 +160,9 @@ namespace green::utils {
     }
 
     /**
-     * Return event timing pair
+     * Return timing event
      * @param event_name - event name
-     * @return event timing
+     * @return event by name
      */
     event_t& event(const std::string& event_name) {
       if (_events.find(event_name) != _events.end()) {
@@ -145,14 +173,16 @@ namespace green::utils {
     };
 
   private:
-    // registered events timing pairs
-    // pair.first corresponds to total event time
-    // pair.second corresponds to last time when event was happened
+    // registered timing events
     std::map<std::string, event_t>  _events;
+    // registered root timing events
     std::map<std::string, event_t*> _root_events;
     event_t*                        _current_event = nullptr;
 
-    [[nodiscard]] double            time() const { return MPI_Wtime(); }
+    /**
+     * @return time in seconds since some arbitrary time in the past;
+     */
+    [[nodiscard]] static double     time() { return MPI_Wtime(); }
   };
 }  // namespace green::utils
 #endif  // GREEN_UTILS_TIMING_H

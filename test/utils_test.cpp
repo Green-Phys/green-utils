@@ -12,7 +12,7 @@
 
 TEST_CASE("Timing Init") {
   SECTION("Test Start") {
-    green::utils::execution_statistic_t statistic;
+    green::utils::timing statistic;
     statistic.add("START");
     statistic.start("START");
 #ifndef NDEBUG
@@ -24,7 +24,7 @@ TEST_CASE("Timing Init") {
 }
 TEST_CASE("Timing") {
   SECTION("Test Event Timing") {
-    green::utils::execution_statistic_t statistic;
+    green::utils::timing statistic;
     statistic.add("START");
     double s = MPI_Wtime();
     statistic.start("START");
@@ -35,7 +35,7 @@ TEST_CASE("Timing") {
   }
 
   SECTION("Test Nesting Events") {
-    green::utils::execution_statistic_t statistic;
+    green::utils::timing statistic;
     statistic.add("START");
     statistic.add("INNER");
     double s = MPI_Wtime();
