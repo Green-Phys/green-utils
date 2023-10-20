@@ -17,6 +17,15 @@ target_link_libraries(utils_test
         Catch2::Catch2WithMain
         GREEN::UTILS)
 
+add_executable(mpi_utils_test mpi_utils_test.cpp
+        main_test.cpp)
+target_link_libraries(mpi_utils_test
+        PRIVATE
+        Catch2::Catch2
+        GREEN::UTILS)
+
+
 include(CTest)
 include(Catch)
 catch_discover_tests(utils_test)
+catch_discover_tests(mpi_utils_test)

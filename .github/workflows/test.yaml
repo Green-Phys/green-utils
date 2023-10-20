@@ -27,3 +27,4 @@ jobs:
         module load BuildEnv/gcc-12.2.0.lua;
         cd build;
         ctest -j1;
+        mpirun -np 4 test/mpi_utils_test;
