@@ -42,9 +42,56 @@ namespace green::utils {
   template <>
   inline MPI_Datatype mpi_type<float>::type = MPI_FLOAT;
   template <>
+  inline MPI_Datatype mpi_type<long>::type = MPI_LONG;
+  template <>
+  inline MPI_Datatype mpi_type<int>::type = MPI_INT;
+  template <>
+  inline MPI_Datatype mpi_type<size_t>::type = MPI_UNSIGNED_LONG;
+  template <>
   inline MPI_Datatype mpi_type<std::complex<double>>::type = MPI_C_DOUBLE_COMPLEX;
   template <>
   inline MPI_Datatype mpi_type<std::complex<float>>::type = MPI_C_FLOAT_COMPLEX;
+
+  void setup_intranode_communicator(MPI_Comm global_comm, const int global_rank, MPI_Comm& intranode_comm, int& intranode_rank,
+                                    int& intranode_size);
+
+  void setup_devices_communicator(MPI_Comm global_comm, const int global_rank, const int& intranode_rank,
+                                  const int& devCount_per_node, const int& devCount_total, MPI_Comm& devices_comm,
+                                  int& devices_rank, int& devices_size);
+
+  void setup_internode_communicator(MPI_Comm global_comm, const int global_rank, const int& intranode_rank,
+                                    MPI_Comm& internode_comm, int& internode_rank, int& internode_size);
+
+  void setup_communicators(MPI_Comm global_comm, int global_rank, MPI_Comm& intranode_comm, int& intranode_rank,
+                           int& intranode_size, MPI_Comm& internode_comm, int& internode_rank, int& internode_size);
+
+  /**
+   * MPI runtime context
+   */
+  struct mpi_context {
+    static inline mpi_context& context() {
+      static mpi_context instance(MPI_COMM_WORLD);
+      return instance;
+    }
+
+    mpi_context(MPI_Comm comm) : global(comm) {
+      MPI_Comm_rank(global, &global_rank);
+      MPI_Comm_size(global, &global_size);
+      setup_communicators(global, global_rank, node_comm, node_rank, node_size, internode_comm, internode_rank, internode_size);
+    }
+
+    MPI_Comm global;
+    int      global_rank;
+    int      global_size;
+
+    MPI_Comm node_comm;
+    int      node_rank;
+    int      node_size;
+
+    MPI_Comm internode_comm;
+    int      internode_rank;
+    int      internode_size;
+  };
 
   /**
    * Summation of memory contigious matrices.
@@ -104,26 +151,13 @@ namespace green::utils {
     }
   }
 
-  void setup_intranode_communicator(MPI_Comm global_comm, const int global_rank, MPI_Comm& intranode_comm, int& intranode_rank,
-                                    int& intranode_size);
-
-  void setup_devices_communicator(MPI_Comm global_comm, const int global_rank, const int& intranode_rank,
-                                  const int& devCount_per_node, const int& devCount_total, MPI_Comm& devices_comm,
-                                  int& devices_rank, int& devices_size);
-
-  void setup_internode_communicator(MPI_Comm global_comm, const int global_rank, const int& intranode_rank,
-                                    MPI_Comm& internode_comm, int& internode_rank, int& internode_size);
-
-  void setup_communicators(MPI_Comm global_comm, int global_rank, MPI_Comm& intranode_comm, int& intranode_rank,
-                           int& intranode_size, MPI_Comm& internode_comm, int& internode_rank, int& internode_size);
-
   template <typename T>
   void setup_mpi_shared_memory(T** ptr_to_shared_mem, MPI_Aint& buffer_size, MPI_Win& shared_win, MPI_Comm intranode_comm,
                                int intranode_rank) {
     int disp_unit;
     // Allocate shared memory buffer (i.e. shared_win) on local process 0 of each shared-memory communicator (i.e. of each node)
-    if (MPI_Win_allocate_shared((!intranode_rank) ? buffer_size*sizeof(T) : 0, sizeof(T), MPI_INFO_NULL, intranode_comm, ptr_to_shared_mem,
-                                &shared_win) != MPI_SUCCESS)
+    if (MPI_Win_allocate_shared((!intranode_rank) ? buffer_size * sizeof(T) : 0, sizeof(T), MPI_INFO_NULL, intranode_comm,
+                                ptr_to_shared_mem, &shared_win) != MPI_SUCCESS)
       throw mpi_shared_memory_error("Failed allocating shared memory.");
 
     // This will be called by all processes to query the pointer to the shared area on local zero process.
@@ -145,6 +179,21 @@ namespace green::utils {
     if (MPI_Win_shared_query(shared_win, 0, &buffer_size, &disp_unit, ptr_to_shared_mem) != MPI_SUCCESS)
       throw mpi_shared_memory_error("Failed extracting pointer to the shared area)");
     MPI_Barrier(intranode_comm);
+  }
+
+  template <typename T>
+  void setup_mpi_shared_memory(T** ptr_to_shared_mem, MPI_Aint local_size, MPI_Aint& buffer_size, MPI_Win& shared_win,
+                               mpi_context& context) {
+    int disp_unit;
+    // Allocate shared memory buffer (i.e. shared_win) on local process 0 of each shared-memory communicator (i.e. of each node)
+    if (MPI_Win_allocate_shared(local_size * sizeof(T), sizeof(T), MPI_INFO_NULL, context.node_comm, ptr_to_shared_mem,
+                                &shared_win) != MPI_SUCCESS)
+      throw mpi_shared_memory_error("Failed allocating shared memory.");
+
+    // This will be called by all processes to query the pointer to the shared area on local zero process.
+    if (MPI_Win_shared_query(shared_win, 0, &buffer_size, &disp_unit, ptr_to_shared_mem) != MPI_SUCCESS)
+      throw mpi_shared_memory_error("Failed extracting pointer to the shared area)");
+    MPI_Barrier(context.node_comm);
   }
 
   /**
