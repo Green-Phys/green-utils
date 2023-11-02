@@ -27,6 +27,16 @@ namespace green::utils {
       _object.set_ref(ref);
     }
 
+    shared_object(Shared&& obj) : _object(obj), _size(obj.size()) {
+      _local_size = _size / mpi_context::context().node_size;
+      _local_size += ((_size % mpi_context::context().node_size) > mpi_context::context().node_rank) ? 1 : 0;
+      MPI_Aint                     l_size = _local_size;
+      MPI_Aint                     g_size = _local_size;
+      typename Shared::value_type* ref;
+      setup_mpi_shared_memory(&ref, _local_size, g_size, _win, mpi_context::context());
+      _object.set_ref(ref);
+    }
+
     shared_object(const shared_object& rhs) = delete;
     shared_object(shared_object&& rhs) : _object(rhs._object), _size(rhs._size), _local_size(rhs._local_size), _win(rhs._win) {
       rhs._win = MPI_WIN_NULL;
