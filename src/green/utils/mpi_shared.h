@@ -27,6 +27,20 @@ namespace green::utils {
       _object.set_ref(ref);
     }
 
+    shared_object(const shared_object& rhs) = delete;
+    shared_object(shared_object&& rhs) : _object(rhs._object), _size(rhs._size), _local_size(rhs._local_size), _win(rhs._win) {
+      rhs._win = MPI_WIN_NULL;
+    }
+
+    shared_object& operator=(shared_object&& rhs) {
+      _object     = rhs._object;
+      _size       = rhs._size;
+      _local_size = rhs._local_size;
+      _win        = rhs._win;
+      rhs._win    = MPI_WIN_NULL;
+      return *this;
+    }
+
     virtual ~shared_object() {
       if (_win != MPI_WIN_NULL) MPI_Win_free(&_win);
     }
