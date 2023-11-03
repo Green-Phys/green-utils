@@ -28,14 +28,15 @@ namespace green::utils {
     std::unordered_map<std::string, event_t*> children;
   };
 
-  void print_event(const std::string& name, const std::string& prefix, const event_t& event) {
+  inline void print_event(const std::string& name, const std::string& prefix, const event_t& event) {
     std::cout << prefix << "Event '" << name << "' took " << event.duration << " s." << std::endl;
     for (auto& child : event.children) {
       print_event(child.first, prefix + "  ", *child.second);
     }
   }
 
-  void print_event(MPI_Comm comm, int rank, int size, const std::string& name, const std::string& prefix, const event_t& event) {
+  inline void print_event(MPI_Comm comm, int rank, int size, const std::string& name, const std::string& prefix,
+                          const event_t& event) {
     double max = event.duration;
     double min = event.duration;
     double avg = event.duration;
