@@ -11,10 +11,10 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 
-add_executable(utils_test utils_test.cpp)
+add_executable(utils_test utils_test.cpp main_test.cpp)
 target_link_libraries(utils_test
         PRIVATE
-        Catch2::Catch2WithMain
+        Catch2::Catch2
         GREEN::UTILS)
 
 add_executable(mpi_utils_test mpi_utils_test.cpp

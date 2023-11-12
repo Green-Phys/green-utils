@@ -10,7 +10,7 @@
 
 #include "green/utils/timing.h"
 
-TEST_CASE("Timing Init") {
+TEST_CASE("Timing") {
   SECTION("Test Start") {
     green::utils::timing statistic;
     statistic.add("START");
@@ -21,8 +21,6 @@ TEST_CASE("Timing Init") {
     statistic.end();
     REQUIRE_NOTHROW(statistic.start("START"));
   }
-}
-TEST_CASE("Timing") {
   SECTION("Test Event Timing") {
     green::utils::timing statistic;
     statistic.add("START");
