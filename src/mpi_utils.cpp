@@ -19,9 +19,8 @@ namespace green::utils {
     MPI_Comm_size(intranode_comm, &intranode_size);
   }
 
-  void setup_devices_communicator(MPI_Comm global_comm, const int global_rank, const int& intranode_rank,
-                                  const int& devCount_per_node, const int& devCount_total, MPI_Comm& devices_comm,
-                                  int& devices_rank, int& devices_size) {
+  void setup_devices_communicator(MPI_Comm global_comm, int global_rank, int intranode_rank, int devCount_per_node,
+                                  int devCount_total, MPI_Comm& devices_comm, int& devices_rank, int& devices_size) {
     if (intranode_rank < devCount_per_node) {
       int color = 0;
       MPI_Comm_split(global_comm, color, global_rank, &devices_comm);
@@ -36,8 +35,7 @@ namespace green::utils {
     }
   }
 
-  void setup_internode_communicator(MPI_Comm global_comm, const int global_rank, const int& intranode_rank,
-                                    MPI_Comm& internode_comm, int& internode_rank, int& internode_size) {
+  void setup_internode_communicator(MPI_Comm global_comm, int global_rank, int intranode_rank, MPI_Comm& internode_comm, int& internode_rank, int& internode_size) {
     if (!intranode_rank) {
       MPI_Comm_split(global_comm, intranode_rank, global_rank, &internode_comm);
       MPI_Comm_rank(internode_comm, &internode_rank);

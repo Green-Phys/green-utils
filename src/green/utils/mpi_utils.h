@@ -52,15 +52,13 @@ namespace green::utils {
   template <>
   inline MPI_Datatype mpi_type<std::complex<float>>::type = MPI_C_FLOAT_COMPLEX;
 
-  void setup_intranode_communicator(MPI_Comm global_comm, const int global_rank, MPI_Comm& intranode_comm, int& intranode_rank,
+  void setup_intranode_communicator(MPI_Comm global_comm, int global_rank, MPI_Comm& intranode_comm, int& intranode_rank,
                                     int& intranode_size);
 
-  void setup_devices_communicator(MPI_Comm global_comm, const int global_rank, const int& intranode_rank,
-                                  const int& devCount_per_node, const int& devCount_total, MPI_Comm& devices_comm,
-                                  int& devices_rank, int& devices_size);
+  void setup_devices_communicator(MPI_Comm global_comm, int global_rank, int intranode_rank, int devCount_per_node,
+                                  int devCount_total, MPI_Comm& devices_comm, int& devices_rank, int& devices_size);
 
-  void setup_internode_communicator(MPI_Comm global_comm, const int global_rank, const int& intranode_rank,
-                                    MPI_Comm& internode_comm, int& internode_rank, int& internode_size);
+  void setup_internode_communicator(MPI_Comm global_comm, int global_rank, int intranode_rank, MPI_Comm& internode_comm, int& internode_rank, int& internode_size);
 
   void setup_communicators(MPI_Comm global_comm, int global_rank, MPI_Comm& intranode_comm, int& intranode_rank,
                            int& intranode_size, MPI_Comm& internode_comm, int& internode_rank, int& internode_size);
@@ -211,25 +209,6 @@ namespace green::utils {
         MPI_Bcast(object + offset, mult, mpi_type<T>::type, root_rank, comm);
       }
     }
-  }
-
-  template <typename prec>
-  void Allreduce(int rank, std::complex<prec>* object, size_t element_counts, MPI_Comm& comm) {
-    int MPI_status;
-    if (rank == 0) {
-      MPI_status = MPI_Reduce(MPI_IN_PLACE, object, element_counts, mpi_type<prec>::complex_type, MPI_SUM, 0, comm);
-    } else {
-      MPI_status = MPI_Reduce(object, object, element_counts, mpi_type<prec>::complex_type, MPI_SUM, 0, comm);
-    }
-    if (MPI_status != MPI_SUCCESS) {
-      throw mpi_communication_error("MPI_Reduce fails.");
-    }
-    MPI_Barrier(comm);
-    MPI_status = MPI_Bcast(object, element_counts, mpi_type<prec>::complex_type, 0, comm);
-    if (MPI_status != MPI_SUCCESS) {
-      throw mpi_communication_error("MPI_Bcast fails.");
-    }
-    MPI_Barrier(comm);
   }
 
 }  // namespace green::utils

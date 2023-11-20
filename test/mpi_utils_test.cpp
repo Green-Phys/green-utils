@@ -68,6 +68,60 @@ TEST_CASE("MPI") {
     green::utils::setup_communicators(global, rank, shared, shared_rank, shared_size, inter, inter_rank, inter_size);
   }
 
+  SECTION("Intra-node split") {
+    MPI_Comm global      = green::utils::mpi_context::context.global;
+    int      global_rank = green::utils::mpi_context::context.global_rank;
+    MPI_Comm shared;
+    int      shared_rank;
+    int      shared_size;
+    green::utils::setup_intranode_communicator(global, global_rank, shared, shared_rank, shared_size);
+    REQUIRE(shared_size == green::utils::mpi_context::context.node_size);
+    REQUIRE(shared_rank == green::utils::mpi_context::context.node_rank);
+  }
+
+  SECTION("Inter-node split") {
+    MPI_Comm global      = green::utils::mpi_context::context.global;
+    int      global_rank = green::utils::mpi_context::context.global_rank;
+    MPI_Comm shared;
+    int      shared_rank;
+    int      shared_size;
+    MPI_Comm inter;
+    int      inter_rank;
+    int      inter_size;
+    green::utils::setup_intranode_communicator(global, global_rank, shared, shared_rank, shared_size);
+    green::utils::setup_internode_communicator(global, global_rank, shared_rank, inter, inter_rank, inter_size);
+    if (!shared_rank) {
+      REQUIRE(inter_rank == 0);
+      REQUIRE(inter_size == 1);
+    } else {
+      REQUIRE(inter_rank == -1);
+      REQUIRE(inter_size == -1);
+    }
+  }
+
+  SECTION("Emulate Device split") {
+    MPI_Comm global      = green::utils::mpi_context::context.global;
+    int      global_rank = green::utils::mpi_context::context.global_rank;
+    MPI_Comm shared;
+    int      shared_rank;
+    int      shared_size;
+    MPI_Comm devices;
+    int      devices_rank;
+    int      devices_size;
+    int      devCount_per_node = 2;
+    int      devCount_total    = 2;
+    green::utils::setup_intranode_communicator(global, global_rank, shared, shared_rank, shared_size);
+    green::utils::setup_devices_communicator(global, global_rank, shared_rank, devCount_per_node, devCount_total, devices,
+                                             devices_rank, devices_size);
+    if (shared_rank == 0 || shared_rank == 1) {
+      REQUIRE(devices_rank == shared_rank);
+      REQUIRE(devices_size == 2);
+    } else {
+      REQUIRE(devices_rank == -1);
+      REQUIRE(devices_size == -1);
+    }
+  }
+
   SECTION("Shared memory routines") {
     double*  data;
     MPI_Aint buffer_size = 1000;
@@ -110,5 +164,31 @@ TEST_CASE("MPI") {
     ref_array<double>           shared_data(array_size);
     green::utils::shared_object shared(shared_data);
     run_test_on_shared(shared, shared_data.size());
+  }
+
+  SECTION("AllReduce") {
+    MPI_Comm            global        = green::utils::mpi_context::context.global;
+    int                 global_size   = green::utils::mpi_context::context.global_size;
+    size_t              _nso          = 20;
+    MPI_Datatype        dt_matrix     = green::utils::create_matrix_datatype<double>(_nso * _nso);
+    MPI_Op              matrix_sum_op = green::utils::create_matrix_operation<double>();
+    std::vector<double> G(100 * _nso * _nso);
+    std::fill(G.begin(), G.end(), 1.0);
+    green::utils::allreduce(MPI_IN_PLACE, G.data(), G.size() / (_nso * _nso), dt_matrix, matrix_sum_op, global);
+    REQUIRE(std::all_of(G.begin(), G.end(), [global_size](double g) { return std::abs(g - 1.0 * global_size) < 1e-12; }));
+  }
+
+  SECTION("AllReduce Std Complex") {
+    MPI_Comm                          global        = green::utils::mpi_context::context.global;
+    int                               global_size   = green::utils::mpi_context::context.global_size;
+    size_t                            _nso          = 20;
+    MPI_Datatype                      dt_matrix     = green::utils::create_matrix_datatype<std::complex<double>>(_nso * _nso);
+    MPI_Op                            matrix_sum_op = green::utils::create_matrix_operation<std::complex<double>>();
+    std::vector<std::complex<double>> G(100 * _nso * _nso);
+    std::fill(G.begin(), G.end(), std::complex<double>(1.0, 2.0));
+    green::utils::allreduce(MPI_IN_PLACE, G.data(), G.size() / (_nso * _nso), dt_matrix, matrix_sum_op, global);
+    REQUIRE(std::all_of(G.begin(), G.end(), [global_size](const std::complex<double>& g) {
+      return (std::abs(g.real() - 1.0 * global_size) < 1e-12) && (std::abs(g.imag() - 2.0 * global_size) < 1e-12);
+    }));
   }
 }
