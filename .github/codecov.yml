@@ -1,2 +1,3 @@
 ignore:
   - "test/*"
+  - "src/green/utils/except.h"
