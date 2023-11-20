@@ -32,6 +32,16 @@ TEST_CASE("Timing") {
     REQUIRE(std::abs(statistic.event("START").duration - (e - s)) < 1e-3);
   }
 
+  SECTION("Test Event Printing") {
+    green::utils::timing statistic;
+    double               s = MPI_Wtime();
+    statistic.start("START");
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    statistic.end();
+    REQUIRE_NOTHROW(statistic.print());
+    REQUIRE_NOTHROW(statistic.print(MPI_COMM_WORLD));
+  }
+
   SECTION("Test Nesting Events") {
     green::utils::timing statistic;
     statistic.add("START");
@@ -51,5 +61,10 @@ TEST_CASE("Timing") {
     REQUIRE(statistic.event("INNER").parent == &(statistic.event("START")));
     REQUIRE(statistic.event("START").parent == nullptr);
     REQUIRE(statistic.event("START").children.size() == 1);
+    REQUIRE_NOTHROW(statistic.end());
+    REQUIRE(statistic.event("UNKNOWN").parent == nullptr);
+    statistic.start("TEST");
+    REQUIRE(statistic.event("UNKNOWN2").parent == &statistic.event("TEST"));
+    statistic.end();
   }
 }

@@ -171,6 +171,7 @@ namespace green::utils {
         return _events[event_name];
       }
       _events[event_name] = event_t(0.0, 0.0);
+      if (_current_event) _events[event_name].parent = _current_event;
       return _events[event_name];
     };
 

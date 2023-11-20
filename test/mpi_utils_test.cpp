@@ -102,6 +102,7 @@ TEST_CASE("MPI") {
   SECTION("Emulate Device split") {
     MPI_Comm global      = green::utils::mpi_context::context.global;
     int      global_rank = green::utils::mpi_context::context.global_rank;
+    int      global_size = green::utils::mpi_context::context.global_size;
     MPI_Comm shared;
     int      shared_rank;
     int      shared_size;
@@ -120,6 +121,9 @@ TEST_CASE("MPI") {
       REQUIRE(devices_rank == -1);
       REQUIRE(devices_size == -1);
     }
+    REQUIRE_THROWS_AS(green::utils::setup_devices_communicator(global, global_rank, shared_rank, shared_size + 2, global_size + 2,
+                                                               devices, devices_rank, devices_size),
+                      green::utils::mpi_communicator_error);
   }
 
   SECTION("Shared memory routines") {
