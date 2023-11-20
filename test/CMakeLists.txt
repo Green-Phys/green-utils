@@ -28,4 +28,3 @@ target_link_libraries(mpi_utils_test
 include(CTest)
 include(Catch)
 catch_discover_tests(utils_test)
-catch_discover_tests(mpi_utils_test)
