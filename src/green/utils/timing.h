@@ -8,11 +8,11 @@
 
 #include <mpi.h>
 
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "except.h"
 
@@ -133,11 +133,14 @@ namespace green::utils {
      * Print statistics for all observed events
      */
     void print() {
-      std::cout << "Execution statistics:" << std::endl;
+      std::cout << "Runtime statistics:" << std::endl;
+      auto old_precision = std::cout.precision();
+      std::cout << std::setprecision(5);
       for (auto& kv : _root_events) {
         print_event(kv.first, "", *kv.second);
       }
       std::cout << "=====================" << std::endl;
+      std::cout << std::setprecision(old_precision);
     }
 
     /**
@@ -151,14 +154,17 @@ namespace green::utils {
       MPI_Comm_rank(comm, &id);
       MPI_Comm_size(comm, &np);
       if (!id) {
-        std::cout << "Execution statistics: " << std::endl;
+        std::cout << "Runtime statistics: " << std::endl;
       }
+      auto old_precision = std::cout.precision();
+      std::cout << std::setprecision(6);
       for (auto& kv : _root_events) {
         print_event(comm, id, np, kv.first, "", *kv.second);
       }
       if (!id) {
         std::cout << "=====================" << std::endl;
       }
+      std::cout << std::setprecision(old_precision);
     }
 
     /**
