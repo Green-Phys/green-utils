@@ -206,9 +206,11 @@ TEST_CASE("MPI") {
       statistic.start("INNER");
       statistic.end();
     }
+    statistic.start("INNER2");
     statistic.end();
-    if(green::utils::mpi_context::context.global_rank) REQUIRE(statistic.event("START").children.size() == 0);
-    statistic.print(MPI_COMM_WORLD);
+    statistic.end();
     if(green::utils::mpi_context::context.global_rank) REQUIRE(statistic.event("START").children.size() == 1);
+    statistic.print(MPI_COMM_WORLD);
+    if(green::utils::mpi_context::context.global_rank) REQUIRE(statistic.event("START").children.size() == 2);
   }
 }
