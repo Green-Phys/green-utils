@@ -8,6 +8,7 @@
 
 #include <mpi.h>
 
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -19,12 +20,12 @@
 namespace green::utils {
 
   struct event_t {
-    event_t() : start(0), duration(0), active(false) {}
-    event_t(double start_, double duration_) : start(start_), duration(duration_), active(false){};
-    double                                    start;
-    double                                    duration;
-    bool                                      active;
-    event_t*                                  parent = nullptr;
+             event_t() : start(0), duration(0), active(false) {}
+             event_t(double start_, double duration_) : start(start_), duration(duration_), active(false){};
+    double   start;
+    double   duration;
+    bool     active;
+    event_t* parent = nullptr;
     std::unordered_map<std::string, event_t*> children;
   };
 
@@ -77,10 +78,10 @@ namespace green::utils {
     /**
      * Default constructor is public for testing
      */
-    timing()                      = default;
+         timing()                 = default;
 
     // Delete possibility of coping timing object
-    timing(timing const&)         = delete;
+         timing(timing const&)    = delete;
     void operator=(timing const&) = delete;
 
     void add(const std::string& name) {
@@ -143,7 +144,7 @@ namespace green::utils {
       std::cout << std::setprecision(old_precision);
     }
 
-    template<typename EventMap>
+    template <typename EventMap>
     void sync_events(MPI_Comm comm, EventMap& events) {
       int id, np;
       MPI_Comm_rank(comm, &id);
@@ -151,25 +152,25 @@ namespace green::utils {
       int num_events = events.size();
       MPI_Bcast(&num_events, 1, MPI_INT, 0, comm);
       auto it = events.begin();
-      for(int i = 0; i < num_events; ++i) {
+      for (int i = 0; i < num_events; ++i) {
         std::string name = "";
-        int len = 0;
-        if(!id) {
+        int         len  = 0;
+        if (!id) {
           name = it->first;
-          len = name.length();
+          len  = name.length();
           std::advance(it, 1);
         }
         MPI_Bcast(&len, 1, MPI_INT, 0, comm);
-        if(id) {
-          char *buf = new char[len];
+        if (id) {
+          char* buf = new char[len];
           MPI_Bcast(buf, len, MPI_CHAR, 0, comm);
           name = std::string(buf, len);
-          delete [] buf;
+          delete[] buf;
         } else {
-          char *buf = new char[len];
+          char* buf = new char[len];
           std::strcpy(buf, name.c_str());
           MPI_Bcast(buf, len, MPI_CHAR, 0, comm);
-          delete [] buf;
+          delete[] buf;
         }
         if (events.find(name) == events.end()) {
           events[name] = &event(name);
