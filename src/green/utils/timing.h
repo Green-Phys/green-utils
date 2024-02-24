@@ -143,6 +143,42 @@ namespace green::utils {
       std::cout << std::setprecision(old_precision);
     }
 
+    template<typename EventMap>
+    void sync_events(MPI_Comm comm, EventMap& events) {
+      int id, np;
+      MPI_Comm_rank(comm, &id);
+      MPI_Comm_size(comm, &np);
+      int num_events = events.size();
+      MPI_Bcast(&num_events, 1, MPI_INT, 0, comm);
+      auto it = events.begin();
+      for(int i = 0; i < num_events; ++i) {
+        std::string name = "";
+        int len = 0;
+        if(!id) {
+          name = it->first;
+          len = name.length();
+          std::advance(it, 1);
+        }
+        MPI_Bcast(&len, 1, MPI_INT, 0, comm);
+        if(id) {
+          char *buf = new char[len];
+          MPI_Bcast(buf, len, MPI_CHAR, 0, comm);
+          name = std::string(buf, len);
+          delete [] buf;
+        } else {
+          char *buf = new char[len];
+          std::strcpy(buf, name.c_str());
+          MPI_Bcast(buf, len, MPI_CHAR, 0, comm);
+          delete [] buf;
+        }
+        if (events.find(name) == events.end()) {
+          events[name] = &event(name);
+        }
+        event_t& e = event(name);
+        sync_events(comm, e.children);
+      }
+    }
+
     /**
      * Print statistics for all observed events. min, max and averaged time across all MPI processes within a given
      * MPI communicator will be computed and printed.
@@ -153,6 +189,7 @@ namespace green::utils {
       int id, np;
       MPI_Comm_rank(comm, &id);
       MPI_Comm_size(comm, &np);
+      sync_events(comm, _root_events);
       if (!id) {
         std::cout << "Runtime statistics: " << std::endl;
       }

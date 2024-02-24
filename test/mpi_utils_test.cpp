@@ -5,6 +5,8 @@
 
 #include "green/utils/mpi_utils.h"
 
+#include <green/utils/timing.h>
+
 #include <algorithm>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -194,5 +196,19 @@ TEST_CASE("MPI") {
     REQUIRE(std::all_of(G.begin(), G.end(), [global_size](const std::complex<double>& g) {
       return (std::abs(g.real() - 1.0 * global_size) < 1e-12) && (std::abs(g.imag() - 2.0 * global_size) < 1e-12);
     }));
+  }
+
+  SECTION("Test Event Printing") {
+    green::utils::timing statistic;
+    double               s = MPI_Wtime();
+    statistic.start("START");
+    if(!green::utils::mpi_context::context.global_rank) {
+      statistic.start("INNER");
+      statistic.end();
+    }
+    statistic.end();
+    if(green::utils::mpi_context::context.global_rank) REQUIRE(statistic.event("START").children.size() == 0);
+    statistic.print(MPI_COMM_WORLD);
+    if(green::utils::mpi_context::context.global_rank) REQUIRE(statistic.event("START").children.size() == 1);
   }
 }
