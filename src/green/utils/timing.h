@@ -1,8 +1,23 @@
 /*
- * Copyright (c) 2023 University of Michigan.
+ * Copyright (c) 2023 University of Michigan
  *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this
+ * software and associated documentation files (the “Software”), to deal in the Software
+ * without restriction, including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+ * PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+ * FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
-
 #ifndef GREEN_UTILS_TIMING_H
 #define GREEN_UTILS_TIMING_H
 
@@ -12,6 +27,7 @@
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 
@@ -30,7 +46,10 @@ namespace green::utils {
   };
 
   inline void print_event(const std::string& name, const std::string& prefix, const event_t& event) {
-    std::cout << prefix << "Event '" << name << "' took " << event.duration << " s." << std::endl;
+    std::stringstream ss;
+    ss << std::setprecision(7) << std::fixed;
+    ss << prefix << "Event '" << name << "' took " << event.duration << " s." << std::endl;
+    std::cout << ss.str();
     for (auto& child : event.children) {
       print_event(child.first, prefix + "  ", *child.second);
     }
@@ -38,9 +57,11 @@ namespace green::utils {
 
   inline void print_event(MPI_Comm comm, int rank, int size, const std::string& name, const std::string& prefix,
                           const event_t& event) {
-    double max = event.duration;
-    double min = event.duration;
-    double avg = event.duration;
+    double            max = event.duration;
+    double            min = event.duration;
+    double            avg = event.duration;
+    std::stringstream ss;
+    ss << std::setprecision(7) << std::fixed;
     if (!rank) {
       MPI_Reduce(MPI_IN_PLACE, &max, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
       MPI_Reduce(MPI_IN_PLACE, &min, 1, MPI_DOUBLE, MPI_MIN, 0, comm);
@@ -50,9 +71,11 @@ namespace green::utils {
       MPI_Reduce(&min, &min, 1, MPI_DOUBLE, MPI_MIN, 0, comm);
       MPI_Reduce(&avg, &avg, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
     }
-    if (!rank)
-      std::cout << prefix << "Event '" << name << "' took max:" << max << " min: " << min << " avg: " << avg / size << " s."
-                << std::endl;
+    if (!rank) {
+      ss << prefix << "Event '" << name << "' took max:" << max << " min: " << min << " avg: " << avg / size << " s."
+         << std::endl;
+      std::cout << ss.str();
+    }
     for (auto& child : event.children) {
       print_event(comm, rank, size, child.first, prefix + "  ", *child.second);
     }
@@ -135,13 +158,10 @@ namespace green::utils {
      */
     void print() {
       std::cout << "Runtime statistics:" << std::endl;
-      auto old_precision = std::cout.precision();
-      std::cout << std::setprecision(5);
       for (auto& kv : _root_events) {
         print_event(kv.first, "", *kv.second);
       }
       std::cout << "=====================" << std::endl;
-      std::cout << std::setprecision(old_precision);
     }
 
     template <typename EventMap>
