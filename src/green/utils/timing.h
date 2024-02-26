@@ -98,10 +98,7 @@ namespace green::utils {
     }
 
   public:
-    /**
-     * Default constructor is public for testing
-     */
-         timing()                 = default;
+         timing(const std::string& name = "") : _name(name) {}
 
     // Delete possibility of coping timing object
          timing(timing const&)    = delete;
@@ -157,13 +154,73 @@ namespace green::utils {
      * Print statistics for all observed events
      */
     void print() {
-      std::cout << "Runtime statistics:" << std::endl;
+      std::cout << _name << (_name.length() > 0 ? " " : "") << "timing: " << std::endl;
       for (auto& kv : _root_events) {
         print_event(kv.first, "", *kv.second);
       }
       std::cout << "=====================" << std::endl;
     }
 
+    /**
+     * Print statistics for all observed events. min, max and averaged time across all MPI processes within a given
+     * MPI communicator will be computed and printed.
+     *
+     * @param comm - MPI communicator
+     */
+    void print(MPI_Comm comm) {
+      int id, np;
+      MPI_Comm_rank(comm, &id);
+      MPI_Comm_size(comm, &np);
+      sync_events(comm, _root_events);
+      if (!id) {
+        std::cout << _name << (_name.length() > 0 ? " " : "") << "timing: " << std::endl;
+      }
+      auto old_precision = std::cout.precision();
+      std::cout << std::setprecision(6);
+      for (auto& kv : _root_events) {
+        print_event(comm, id, np, kv.first, "", *kv.second);
+      }
+      if (!id) {
+        std::cout << "=====================" << std::endl;
+      }
+      std::cout << std::setprecision(old_precision);
+    }
+
+    /**
+     * Return timing event
+     * @param event_name - event name
+     * @return event by name
+     */
+    event_t& event(const std::string& event_name) {
+      if (_events.find(event_name) != _events.end()) {
+        return _events[event_name];
+      }
+      _events[event_name] = event_t(0.0, 0.0);
+      if (_current_event) _events[event_name].parent = _current_event;
+      return _events[event_name];
+    };
+
+  private:
+    // name of the timer
+    std::string                     _name;
+    // registered timing events
+    std::map<std::string, event_t>  _events;
+    // registered root timing events
+    std::map<std::string, event_t*> _root_events;
+    event_t*                        _current_event = nullptr;
+
+    /**
+     * @return time in seconds since some arbitrary time in the past;
+     */
+    [[nodiscard]] static double     time() { return MPI_Wtime(); }
+
+    /**
+     * \brief Sync events between different cores, we assume that root core have all events
+     *
+     * \tparam EventMap map or unordered_map
+     * \param comm MPI communicator to sync events over
+     * \param events map of events
+     */
     template <typename EventMap>
     void sync_events(MPI_Comm comm, EventMap& events) {
       int id, np;
@@ -199,57 +256,6 @@ namespace green::utils {
         sync_events(comm, e.children);
       }
     }
-
-    /**
-     * Print statistics for all observed events. min, max and averaged time across all MPI processes within a given
-     * MPI communicator will be computed and printed.
-     *
-     * @param comm - MPI communicator
-     */
-    void print(MPI_Comm comm) {
-      int id, np;
-      MPI_Comm_rank(comm, &id);
-      MPI_Comm_size(comm, &np);
-      sync_events(comm, _root_events);
-      if (!id) {
-        std::cout << "Runtime statistics: " << std::endl;
-      }
-      auto old_precision = std::cout.precision();
-      std::cout << std::setprecision(6);
-      for (auto& kv : _root_events) {
-        print_event(comm, id, np, kv.first, "", *kv.second);
-      }
-      if (!id) {
-        std::cout << "=====================" << std::endl;
-      }
-      std::cout << std::setprecision(old_precision);
-    }
-
-    /**
-     * Return timing event
-     * @param event_name - event name
-     * @return event by name
-     */
-    event_t& event(const std::string& event_name) {
-      if (_events.find(event_name) != _events.end()) {
-        return _events[event_name];
-      }
-      _events[event_name] = event_t(0.0, 0.0);
-      if (_current_event) _events[event_name].parent = _current_event;
-      return _events[event_name];
-    };
-
-  private:
-    // registered timing events
-    std::map<std::string, event_t>  _events;
-    // registered root timing events
-    std::map<std::string, event_t*> _root_events;
-    event_t*                        _current_event = nullptr;
-
-    /**
-     * @return time in seconds since some arbitrary time in the past;
-     */
-    [[nodiscard]] static double     time() { return MPI_Wtime(); }
   };
 }  // namespace green::utils
 #endif  // GREEN_UTILS_TIMING_H
