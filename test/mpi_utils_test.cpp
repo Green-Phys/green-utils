@@ -130,7 +130,7 @@ TEST_CASE("MPI") {
 
   SECTION("Shared memory routines") {
     double*  data;
-    MPI_Aint buffer_size = 1000;
+    MPI_Aint buffer_size = 1000 * sizeof(double);
     MPI_Win  shared_win;
     green::utils::setup_mpi_shared_memory(&data, buffer_size, shared_win, green::utils::context.node_comm,
                                           green::utils::context.node_rank);
