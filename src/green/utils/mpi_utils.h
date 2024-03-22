@@ -149,12 +149,22 @@ namespace green::utils {
     }
   }
 
+  /**
+   * Allocate shared memory region on 0-th core of the node and assign pointer to it.
+   *
+   * @tparam T type of element
+   * @param ptr_to_shared_mem pointer to the beginning of a shared emory region
+   * @param buffer_size size of shred memory region in bytes
+   * @param shared_win MPI shared memory communication window
+   * @param intranode_comm MPI communicator within the node
+   * @param intranode_rank rank of current core in the node MPI communicator
+   */
   template <typename T>
   void setup_mpi_shared_memory(T** ptr_to_shared_mem, MPI_Aint& buffer_size, MPI_Win& shared_win, MPI_Comm intranode_comm,
                                int intranode_rank) {
     int disp_unit;
     // Allocate shared memory buffer (i.e. shared_win) on local process 0 of each shared-memory communicator (i.e. of each node)
-    if (MPI_Win_allocate_shared((!intranode_rank) ? buffer_size * sizeof(T) : 0, sizeof(T), MPI_INFO_NULL, intranode_comm,
+    if (MPI_Win_allocate_shared((!intranode_rank) ? buffer_size : 0, sizeof(T), MPI_INFO_NULL, intranode_comm,
                                 ptr_to_shared_mem, &shared_win) != MPI_SUCCESS)
       throw mpi_shared_memory_error("Failed allocating shared memory.");
 
