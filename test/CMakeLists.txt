@@ -11,6 +11,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 
+
+add_executable(nompi_utils_test nompi_utils_test.cpp)
+target_link_libraries(nompi_utils_test
+        PRIVATE
+        Catch2::Catch2WithMain
+        GREEN::UTILS)
+
 add_executable(utils_test utils_test.cpp main_test.cpp)
 target_link_libraries(utils_test
         PRIVATE
@@ -28,3 +35,4 @@ target_link_libraries(mpi_utils_test
 include(CTest)
 include(Catch)
 catch_discover_tests(utils_test)
+catch_discover_tests(nompi_utils_test)
