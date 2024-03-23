@@ -10,14 +10,13 @@
 
 #include <complex>
 #include <iostream>
-#include <stdexcept>
 #include <string>
 
 #include "except.h"
 
 namespace green::utils {
 
-  template <typename prec>
+  template <typename>
   struct mpi_type {
     static MPI_Datatype type;
     static MPI_Datatype complex_type;
@@ -58,7 +57,8 @@ namespace green::utils {
   void setup_devices_communicator(MPI_Comm global_comm, int global_rank, int intranode_rank, int devCount_per_node,
                                   int devCount_total, MPI_Comm& devices_comm, int& devices_rank, int& devices_size);
 
-  void setup_internode_communicator(MPI_Comm global_comm, int global_rank, int intranode_rank, MPI_Comm& internode_comm, int& internode_rank, int& internode_size);
+  void setup_internode_communicator(MPI_Comm global_comm, int global_rank, int intranode_rank, MPI_Comm& internode_comm,
+                                    int& internode_rank, int& internode_size);
 
   void setup_communicators(MPI_Comm global_comm, int global_rank, MPI_Comm& intranode_comm, int& intranode_rank,
                            int& intranode_size, MPI_Comm& internode_comm, int& internode_rank, int& internode_size);
@@ -73,9 +73,19 @@ namespace green::utils {
     }
 
     mpi_context(MPI_Comm comm) : global(comm) {
-      MPI_Comm_rank(global, &global_rank);
-      MPI_Comm_size(global, &global_size);
-      setup_communicators(global, global_rank, node_comm, node_rank, node_size, internode_comm, internode_rank, internode_size);
+      int initialized;
+      if(MPI_Initialized(&initialized) == MPI_SUCCESS && initialized == 0) {
+        global_rank = 0;
+        global_size = 1;
+        node_rank = 0;
+        node_size = 1;
+        internode_rank = 0;
+        internode_size = 1;
+      } else {
+        MPI_Comm_rank(global, &global_rank);
+        MPI_Comm_size(global, &global_size);
+        setup_communicators(global, global_rank, node_comm, node_rank, node_size, internode_comm, internode_rank, internode_size);
+      }
     }
 
     MPI_Comm global;
@@ -164,8 +174,8 @@ namespace green::utils {
                                int intranode_rank) {
     int disp_unit;
     // Allocate shared memory buffer (i.e. shared_win) on local process 0 of each shared-memory communicator (i.e. of each node)
-    if (MPI_Win_allocate_shared((!intranode_rank) ? buffer_size : 0, sizeof(T), MPI_INFO_NULL, intranode_comm,
-                                ptr_to_shared_mem, &shared_win) != MPI_SUCCESS)
+    if (MPI_Win_allocate_shared((!intranode_rank) ? buffer_size : 0, sizeof(T), MPI_INFO_NULL, intranode_comm, ptr_to_shared_mem,
+                                &shared_win) != MPI_SUCCESS)
       throw mpi_shared_memory_error("Failed allocating shared memory.");
 
     // This will be called by all processes to query the pointer to the shared area on local zero process.

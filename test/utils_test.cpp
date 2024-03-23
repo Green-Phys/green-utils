@@ -9,6 +9,7 @@
 #include <thread>
 
 #include "green/utils/timing.h"
+#include "green/utils/mpi_shared.h"
 
 TEST_CASE("Timing") {
   SECTION("Test Start") {
@@ -66,5 +67,14 @@ TEST_CASE("Timing") {
     statistic.start("TEST");
     REQUIRE(statistic.event("UNKNOWN2").parent == &statistic.event("TEST"));
     statistic.end();
+  }
+
+  SECTION("Test Context without MPI_Init") {
+    REQUIRE(green::utils::context.global_rank == 0);
+    REQUIRE(green::utils::context.global_size == 1);
+    REQUIRE(green::utils::context.node_rank == 0);
+    REQUIRE(green::utils::context.node_size == 1);
+    REQUIRE(green::utils::context.internode_rank == 0);
+    REQUIRE(green::utils::context.internode_size == 1);
   }
 }
