@@ -239,16 +239,9 @@ namespace green::utils {
         }
         MPI_Bcast(&len, 1, MPI_INT, 0, comm);
         if (id) {
-          char* buf = new char[len];
-          MPI_Bcast(buf, len, MPI_CHAR, 0, comm);
-          name = std::string(buf, len);
-          delete[] buf;
-        } else {
-          char* buf = new char[len];
-          std::strcpy(buf, name.c_str());
-          MPI_Bcast(buf, len, MPI_CHAR, 0, comm);
-          delete[] buf;
+          name.resize(len);
         }
+        MPI_Bcast(const_cast<char*>(name.data()), len, MPI_CHAR, 0, comm);
         if (events.find(name) == events.end()) {
           events[name] = &event(name);
         }
