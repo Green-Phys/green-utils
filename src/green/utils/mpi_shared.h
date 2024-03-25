@@ -14,8 +14,8 @@ namespace green::utils {
     Shared                       _object;
     size_t                       _size;
     typename Shared::value_type* _ref;
-    size_t                       _local_size;
-    MPI_Win                      _win;
+    size_t                       _local_size{};
+    MPI_Win                      _win{};
 
     void                         assign_ptr() {
       _local_size = _size / mpi_context::context().node_size;
@@ -28,7 +28,12 @@ namespace green::utils {
 
   public:
     template <typename... Args>
-    shared_object(size_t s1, Args... args) : _object(nullptr, s1, size_t(args)...), _size(_object.size()) {
+    explicit shared_object(size_t s1, Args... args) : _object(nullptr, s1, size_t(args)...), _size(_object.size()) {
+      assign_ptr();
+    }
+
+    template <size_t N>
+    explicit shared_object(const std::array<size_t, N>& shape) : _object(nullptr, shape), _size(_object.size()) {
       assign_ptr();
     }
 
