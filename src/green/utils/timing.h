@@ -48,7 +48,10 @@ namespace green::utils {
   inline void print_event(const std::string& name, const std::string& prefix, const event_t& event) {
     std::stringstream ss;
     ss << std::setprecision(7) << std::fixed;
-    ss << prefix << "Event '" << name << "' took " << event.duration << " s." << std::endl;
+    ss << prefix << "Event '" << name << "' took ";
+    std::cout << std::setw(45)<< std::left << ss.str();
+    ss.str("");
+    ss << event.duration << " s." << std::endl;
     std::cout << ss.str();
     for (auto& child : event.children) {
       print_event(child.first, prefix + "  ", *child.second);
@@ -72,8 +75,10 @@ namespace green::utils {
       MPI_Reduce(&avg, &avg, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
     }
     if (!rank) {
-      ss << prefix << "Event '" << name << "' took max:" << max << " min: " << min << " avg: " << avg / size << " s."
-         << std::endl;
+      ss  << prefix << "Event '" << name << "' took";
+      std::cout << std::setw(45) << std::left << ss.str();
+      ss.str("");
+      ss << " max:" << max << " min: " << min << " avg: " << avg / size << " s." << std::endl;
       std::cout << ss.str();
     }
     for (auto& child : event.children) {
