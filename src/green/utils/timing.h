@@ -36,12 +36,12 @@
 namespace green::utils {
 
   struct event_t {
-             event_t() : start(0), duration(0), active(false) {}
-             event_t(double start_, double duration_) : start(start_), duration(duration_), active(false){};
-    double   start;
-    double   duration;
-    bool     active;
-    event_t* parent = nullptr;
+    event_t() : start(0), duration(0), active(false) {}
+    event_t(double start_, double duration_) : start(start_), duration(duration_), active(false){};
+    double                                    start;
+    double                                    duration;
+    bool                                      active;
+    event_t*                                  parent = nullptr;
     std::unordered_map<std::string, event_t*> children;
   };
 
@@ -49,7 +49,7 @@ namespace green::utils {
     std::stringstream ss;
     ss << std::setprecision(7) << std::fixed;
     ss << prefix << "Event '" << name << "' took ";
-    std::cout << std::setw(45)<< std::left << ss.str();
+    std::cout << std::setw(45) << std::left << ss.str();
     ss.str("");
     ss << event.duration << " s." << std::endl;
     std::cout << ss.str();
@@ -64,7 +64,7 @@ namespace green::utils {
     double            min = event.duration;
     double            avg = event.duration;
     std::stringstream ss;
-    ss << std::setprecision(7) << std::fixed;
+    ss << std::setprecision(6) << std::fixed;
     if (!rank) {
       MPI_Reduce(MPI_IN_PLACE, &max, 1, MPI_DOUBLE, MPI_MAX, 0, comm);
       MPI_Reduce(MPI_IN_PLACE, &min, 1, MPI_DOUBLE, MPI_MIN, 0, comm);
@@ -75,10 +75,12 @@ namespace green::utils {
       MPI_Reduce(&avg, &avg, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
     }
     if (!rank) {
-      ss  << prefix << "Event '" << name << "' took";
+      ss << prefix << "Event '" << name << "' took";
       std::cout << std::setw(45) << std::left << ss.str();
       ss.str("");
-      ss << " max:" << max << " min: " << min << " avg: " << avg / size << " s." << std::endl;
+      ss << std::fixed;
+      ss << " max: " << std::setw(13) << max << " min: " << std::setw(13) << min << " avg: " << std::setw(13) << avg / size
+         << " s." << std::endl;
       std::cout << ss.str();
     }
     for (auto& child : event.children) {
@@ -103,10 +105,10 @@ namespace green::utils {
     }
 
   public:
-         timing(const std::string& name = "") : _name(name) {}
+    timing(const std::string& name = "") : _name(name) {}
 
     // Delete possibility of coping timing object
-         timing(timing const&)    = delete;
+    timing(timing const&)         = delete;
     void operator=(timing const&) = delete;
 
     void add(const std::string& name) {
