@@ -79,7 +79,7 @@ namespace green::utils {
       std::cout << std::setw(45) << std::left << ss.str();
       ss.str("");
       ss << std::fixed;
-      ss  << std::setw(13) << max << std::setw(13) << min  << std::setw(13) << avg / size
+      ss << " " << std::setw(13) << max << " " << std::setw(13) << min << " " << std::setw(13) << avg / size
          << " s." << std::endl;
       std::cout << ss.str();
     }
