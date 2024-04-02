@@ -79,7 +79,7 @@ namespace green::utils {
       std::cout << std::setw(45) << std::left << ss.str();
       ss.str("");
       ss << std::fixed;
-      ss << " max: " << std::setw(13) << max << " min: " << std::setw(13) << min << " avg: " << std::setw(13) << avg / size
+      ss  << std::setw(13) << max << std::setw(13) << min  << std::setw(13) << avg / size
          << " s." << std::endl;
       std::cout << ss.str();
     }
@@ -180,7 +180,8 @@ namespace green::utils {
       MPI_Comm_size(comm, &np);
       sync_events(comm, _root_events);
       if (!id) {
-        std::cout << _name << (_name.length() > 0 ? " " : "") << "timing: " << std::endl;
+        std::cout << std::setw(43) << (_name + (_name.length() > 0 ? " " : "") + "timing: ") << std::setw(13) << std::right << "max"
+                  << std::setw(13) << "min" << std::setw(13) << "avg" << std::endl;
       }
       auto old_precision = std::cout.precision();
       std::cout << std::setprecision(6);
