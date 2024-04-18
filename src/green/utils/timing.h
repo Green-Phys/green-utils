@@ -45,6 +45,15 @@ namespace green::utils {
     std::unordered_map<std::string, event_t> children;
   };
 
+  inline void get_name(MPI_Comm comm, std::string& name) {
+    int len  = name.length();
+    MPI_Bcast(&len, 1, MPI_INT, 0, comm);
+    if (len != name.length()) {
+      name.resize(len);
+    }
+    MPI_Bcast(const_cast<char*>(name.data()), len, MPI_CHAR, 0, comm);
+  }
+
   inline void print_event(const std::string& name, const std::string& prefix, const event_t& event) {
     std::stringstream ss;
     ss << std::setprecision(7) << std::fixed;
@@ -83,8 +92,16 @@ namespace green::utils {
          << " s." << std::endl;
       std::cout << ss.str();
     }
-    for (auto& child : event.children) {
-      print_event(comm, rank, size, child.first, prefix + "  ", child.second);
+    auto it = event.children.begin();
+    for (int i = 0; i < event.children.size(); ++i) {
+      std::string name = "";
+      if(!rank) {
+        name = it->first;
+        std::advance(it, 1);
+      }
+      get_name(comm, name);
+      const event_t& e = event.children.at(name);
+      print_event(comm, rank, size, name, prefix + "  ", e);
     }
   }
 
@@ -156,6 +173,7 @@ namespace green::utils {
       _current_event->duration += time1 - _current_event->start;
       _current_event->active = false;
       _current_event         = _current_event->parent;
+
     }
 
     /**
@@ -186,8 +204,16 @@ namespace green::utils {
       }
       auto old_precision = std::cout.precision();
       std::cout << std::setprecision(6);
-      for (auto& kv : _root_events) {
-        print_event(comm, id, np, kv.first, "", kv.second);
+      auto it = _root_events.begin();
+      for (int i = 0; i < _root_events.size(); ++i) {
+        std::string name = "";
+        if(!id) {
+          name = it->first;
+          std::advance(it, 1);
+        }
+        get_name(comm, name);
+        event_t& e = _root_events[name];
+        print_event(comm, id, np, name, "", e);
       }
       if (!id) {
         std::cout << "=====================" << std::endl;
@@ -241,17 +267,11 @@ namespace green::utils {
       auto it = events.begin();
       for (int i = 0; i < num_events; ++i) {
         std::string name = "";
-        int         len  = 0;
-        if (!id) {
+        if(!id) {
           name = it->first;
-          len  = name.length();
           std::advance(it, 1);
         }
-        MPI_Bcast(&len, 1, MPI_INT, 0, comm);
-        if (id) {
-          name.resize(len);
-        }
-        MPI_Bcast(const_cast<char*>(name.data()), len, MPI_CHAR, 0, comm);
+        get_name(comm, name);
         if (events.find(name) == events.end()) {
           events[name] = event_t(0, 0);
         }
@@ -259,6 +279,7 @@ namespace green::utils {
         sync_events(comm, e.children);
       }
     }
+
   };
 }  // namespace green::utils
 #endif  // GREEN_UTILS_TIMING_H
