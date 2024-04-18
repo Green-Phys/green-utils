@@ -42,7 +42,7 @@ namespace green::utils {
     double                                    duration;
     bool                                      active;
     event_t*                                  parent = nullptr;
-    std::unordered_map<std::string, event_t*> children;
+    std::unordered_map<std::string, event_t> children;
   };
 
   inline void print_event(const std::string& name, const std::string& prefix, const event_t& event) {
@@ -54,7 +54,7 @@ namespace green::utils {
     ss << event.duration << " s." << std::endl;
     std::cout << ss.str();
     for (auto& child : event.children) {
-      print_event(child.first, prefix + "  ", *child.second);
+      print_event(child.first, prefix + "  ", child.second);
     }
   }
 
@@ -84,7 +84,7 @@ namespace green::utils {
       std::cout << ss.str();
     }
     for (auto& child : event.children) {
-      print_event(comm, rank, size, child.first, prefix + "  ", *child.second);
+      print_event(comm, rank, size, child.first, prefix + "  ", child.second);
     }
   }
 
@@ -112,8 +112,8 @@ namespace green::utils {
     void operator=(timing const&) = delete;
 
     void add(const std::string& name) {
-      if (_events.find(name) == _events.end()) {
-        _events[name] = event_t(0.0, 0.0);
+      if (_root_events.find(name) == _root_events.end()) {
+        _root_events[name] = event_t(0.0, 0.0);
       }
     }
 
@@ -126,19 +126,20 @@ namespace green::utils {
      */
     void start(const std::string& name) {
 #ifndef NDEBUG
-      if (_events[name].active) {
+      if (_root_events.find(name) != _root_events.end() && _root_events[name].active) {
         throw wrong_event_state("Event is already active");
       }
 #endif
       if (_current_event) {
-        _events[name].parent           = _current_event;
-        _current_event->children[name] = (&_events[name]);
+        // we have active event, start child event
+        _current_event->children[name].parent = _current_event;
+        _current_event = &_current_event->children[name];
       } else {
-        _root_events[name] = &_events[name];
+        // start root event
+        _current_event = &_root_events[name];
       }
-      _events[name].active = true;
-      _current_event       = &_events[name];
-      _events[name].start  = time();
+      _current_event->active = true;
+      _current_event->start  = time();
     }
 
     /**
@@ -163,7 +164,7 @@ namespace green::utils {
     void print() {
       std::cout << _name << (_name.length() > 0 ? " " : "") << "timing: " << std::endl;
       for (auto& kv : _root_events) {
-        print_event(kv.first, "", *kv.second);
+        print_event(kv.first, "", kv.second);
       }
       std::cout << "=====================" << std::endl;
     }
@@ -180,13 +181,13 @@ namespace green::utils {
       MPI_Comm_size(comm, &np);
       sync_events(comm, _root_events);
       if (!id) {
-        std::cout << std::setw(43) << (_name + (_name.length() > 0 ? " " : "") + "timing: ") << std::setw(13) << std::right << "max"
+        std::cout << std::setw(43) << std::left << (_name + (_name.length() > 0 ? " " : "") + "timing: ") << std::setw(13) << std::right << "max"
                   << std::setw(13) << "min" << std::setw(13) << "avg" << std::endl;
       }
       auto old_precision = std::cout.precision();
       std::cout << std::setprecision(6);
       for (auto& kv : _root_events) {
-        print_event(comm, id, np, kv.first, "", *kv.second);
+        print_event(comm, id, np, kv.first, "", kv.second);
       }
       if (!id) {
         std::cout << "=====================" << std::endl;
@@ -200,22 +201,23 @@ namespace green::utils {
      * @return event by name
      */
     event_t& event(const std::string& event_name) {
-      if (_events.find(event_name) != _events.end()) {
-        return _events[event_name];
+      if (_root_events.find(event_name) != _root_events.end()) {
+        return _root_events[event_name];
       }
-      _events[event_name] = event_t(0.0, 0.0);
-      if (_current_event) _events[event_name].parent = _current_event;
-      return _events[event_name];
+      if (_current_event) {
+        _current_event->children[event_name].parent = _current_event;
+        return _current_event->children[event_name];
+      }
+      _root_events[event_name] = event_t(0.0, 0.0);
+      return _root_events[event_name];
     };
 
   private:
     // name of the timer
     std::string                     _name;
-    // registered timing events
-    std::map<std::string, event_t>  _events;
     // registered root timing events
-    std::map<std::string, event_t*> _root_events;
-    event_t*                        _current_event = nullptr;
+    std::map<std::string, event_t> _root_events;
+    event_t*                       _current_event = nullptr;
 
     /**
      * @return time in seconds since some arbitrary time in the past;
@@ -251,9 +253,9 @@ namespace green::utils {
         }
         MPI_Bcast(const_cast<char*>(name.data()), len, MPI_CHAR, 0, comm);
         if (events.find(name) == events.end()) {
-          events[name] = &event(name);
+          events[name] = event_t(0, 0);
         }
-        event_t& e = event(name);
+        event_t& e = events[name];
         sync_events(comm, e.children);
       }
     }
