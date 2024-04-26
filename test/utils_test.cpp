@@ -80,8 +80,8 @@ TEST_CASE("Timing") {
     statistic.end();
     double e = MPI_Wtime();
     REQUIRE(std::abs(statistic.event("START").duration - (e - s)) < 1e-2);
-    auto & inner_event = statistic.event("START").children["INNER"];
-    auto & inner2_event = inner_event.children["INNER"];
+    auto & inner_event = *statistic.event("START").children["INNER"];
+    auto & inner2_event = *inner_event.children["INNER"];
     REQUIRE(std::abs(inner_event.duration - (ei - si)) < 1e-2);
     REQUIRE(std::abs(inner2_event.duration - (ei - si2)) < 1e-2);
     REQUIRE(inner_event.parent == &(statistic.event("START")));
