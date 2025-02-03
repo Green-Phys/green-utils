@@ -33,27 +33,29 @@ template <typename T>
 void run_test_on_shared(green::utils::shared_object<T>& shared, size_t data_size) {
   size_t total_size = 0;
   size_t local_size = shared.local_size();
-  MPI_Reduce(&local_size, &total_size, 1, green::utils::mpi_type<size_t>::type, MPI_SUM, 0, green::utils::context.node_comm);
-  if (!green::utils::context.node_rank) {
+  MPI_Reduce(&local_size, &total_size, 1, green::utils::mpi_type<size_t>::type, MPI_SUM, 0, shared.cntx().node_comm);
+  std::cout<<green::utils::mpi_context::context.global_rank<<":"<<shared.cntx().global_rank<<" "<<shared.cntx().global_size<<" "<<shared.cntx().node_rank<<" "<<shared.cntx().node_size<<" "<<shared.cntx().internode_rank<<" "<<shared.cntx().internode_size<<std::endl;
+  std::cout<<green::utils::mpi_context::context.global_rank<<":"<<"sizes: "<<local_size<<" " <<total_size<<" "<<data_size<<std::endl;
+  if (!shared.cntx().node_rank) {
     REQUIRE(total_size == data_size);
   }
-  if (green::utils::context.node_size == 1) {
+  if (shared.cntx().node_size == 1) {
     return;
   }
 
   shared.fence();
-  if (green::utils::context.node_rank == 1) {
+  if (shared.cntx().node_rank == 1) {
     std::fill(shared.object().data(), shared.object().data() + shared.object().size(), 0.0);
   }
   shared.fence();
   REQUIRE(std::all_of(shared.object().data(), shared.object().data() + shared.object().size(),
                       [](double x) { return std::abs(x) < 1e-12; }));
   shared.fence();
-  if (green::utils::context.node_rank == 1) {
+  if (shared.cntx().node_rank == 1) {
     shared.object().data()[25] = 15;
   }
   shared.fence();
-  if (green::utils::context.node_rank != 1) {
+  if (shared.cntx().node_rank != 1) {
     REQUIRE(std::abs(shared.object().data()[25] - 15.0) < 1e-12);
   }
 }
@@ -169,6 +171,20 @@ TEST_CASE("MPI") {
 
     ref_array<double>           shared_data(array_size);
     green::utils::shared_object shared(shared_data);
+    run_test_on_shared(shared, shared_data.size());
+  }
+
+  SECTION("Shared wrapper custom context") {
+    green::utils::mpi_context cntx(MPI_COMM_SELF);
+    std::cout<<green::utils::mpi_context::context.global_rank<<":"<<cntx.global_rank<<" "<<cntx.global_size<<" "<<cntx.node_rank<<" "<<cntx.node_size<<" "<<cntx.internode_rank<<" "<<cntx.internode_size<<std::endl;
+    size_t array_size = 1003;
+    SECTION("RValue array") {
+      green::utils::shared_object shared_r(ref_array<double>{array_size}, cntx);
+      run_test_on_shared(shared_r, array_size);
+    }
+
+    ref_array<double>           shared_data(array_size);
+    green::utils::shared_object shared(shared_data, cntx);
     run_test_on_shared(shared, shared_data.size());
   }
 
