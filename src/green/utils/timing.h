@@ -37,11 +37,13 @@
 namespace green::utils {
 
   struct event_t {
-    event_t() : start(0), duration(0), active(false) {}
-    event_t(double start_, double duration_) : start(start_), duration(duration_), active(false){};
+    event_t() : start(0), duration(0), active(false), accumulate(true) {}
+    event_t(double start_, double duration_) : start(start_), duration(duration_), active(false), accumulate(true){};
+    event_t(double start_, double duration_, bool accumulate_) : start(start_), duration(duration_), active(false), accumulate(accumulate_){};
     double                                                    start;
     double                                                    duration;
     bool                                                      active;
+    bool                                                      accumulate; // accumulate time for subsequent measurements
     event_t*                                                  parent = nullptr;
     std::unordered_map<std::string, std::unique_ptr<event_t>> children;
   };
@@ -129,6 +131,20 @@ namespace green::utils {
     timing(timing const&)         = delete;
     void operator=(timing const&) = delete;
 
+    /**
+     * @brief Register a root-level timing event by name without starting it.
+     *
+     * Creates the event entry in the internal root events map if it does not exist yet.
+     * This call is idempotent and has no effect if the event is already present.
+     *
+     * Notes:
+     * - This does not start timing. Use start(name) to begin measuring and end() to stop.
+     * - Added events appear in print()/print(MPI_Comm) output even if never started (duration = 0).
+     * - The event is registered at the root level; child events are created implicitly when
+     *   start(name) is invoked while another event is active.
+     *
+     * @param name Unique identifier of the event to pre-register at the root level.
+     */
     void add(const std::string& name) {
       if (_root_events.find(name) == _root_events.end()) {
         _root_events[name] = std::make_unique<event_t>(0.0, 0.0);
@@ -141,8 +157,9 @@ namespace green::utils {
      * `_current_event` will be set to a newly started event.
      *
      * @param name - event name to start time measurement
+     * @param accumulate - whether to accumulate time for this event
      */
-    void start(const std::string& name) {
+    void start(const std::string& name, bool accumulate=true) {
 #ifndef NDEBUG
       if (_root_events.find(name) != _root_events.end() && _root_events[name]->active) {
         throw wrong_event_state("Event is already active");
@@ -153,10 +170,12 @@ namespace green::utils {
         if (_current_event->children[name] == nullptr) _current_event->children[name] = std::make_unique<event_t>(0, 0);
         _current_event->children[name]->parent = _current_event;
         _current_event                         = _current_event->children[name].get();
+        _current_event->accumulate             = accumulate;
       } else {
         // start root event
         if (_root_events[name] == nullptr) _root_events[name] = std::make_unique<event_t>(0, 0);
         _current_event = _root_events[name].get();
+        _current_event->accumulate = accumulate;
       }
       _current_event->active = true;
       _current_event->start  = time();
@@ -173,10 +192,28 @@ namespace green::utils {
         return;
       }
       double time1 = time();
-      _current_event->duration += time1 - _current_event->start;
+      if (_current_event->accumulate) {
+        _current_event->duration += time1 - _current_event->start;
+      } else {
+        _current_event->duration = time1 - _current_event->start;
+      }
       _current_event->active = false;
       _current_event         = _current_event->parent;
 
+    }
+
+
+    /**
+     * @brief reset the `duration` attribute of all child events of the current event
+     * If there is no current event (i.e., at the root level when `_current_event` is nullptr),
+     * this method returns silently and does nothing.
+     */
+    void reset() {
+      if (!_current_event) return;
+      for (auto& kv : _current_event->children) {
+        kv.second->duration = 0.0;
+        kv.second->active   = false;
+      }
     }
 
     /**

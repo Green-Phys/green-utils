@@ -93,4 +93,56 @@ TEST_CASE("Timing") {
     REQUIRE(statistic.event("UNKNOWN2").parent == &statistic.event("TEST"));
     statistic.end();
   }
+
+  SECTION("Test Accumulate") {
+    // Test case when Accumulate is ON
+    green::utils::timing statistic;
+    double s1 = MPI_Wtime();
+    statistic.start("ACCUMULATE ON", true);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    statistic.end();
+    double e1 = MPI_Wtime();
+    double duration1 = statistic.event("ACCUMULATE ON").duration;
+    REQUIRE(std::abs(duration1 - (e1 - s1)) < 1e-2);
+
+    double s2 = MPI_Wtime();
+    statistic.start("ACCUMULATE ON", true);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    statistic.end();
+    double e2 = MPI_Wtime();
+    double duration2 = statistic.event("ACCUMULATE ON").duration;
+    REQUIRE(std::abs(duration2 - ((e2 - s2) + (e1 - s1))) < 1e-2);
+
+    // Test case when Accumulate is OFF
+    statistic.start("ACCUMULATE OFF", false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    statistic.end();
+    double duration3 = statistic.event("ACCUMULATE OFF").duration;
+
+    statistic.start("ACCUMULATE OFF", false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    statistic.end();
+    double duration4 = statistic.event("ACCUMULATE OFF").duration;
+    REQUIRE(std::abs(duration4 - duration3) < 1e-2);
+  }
+
+  SECTION("Test Reset") {
+    green::utils::timing statistic;
+    statistic.start("ROOT");
+    statistic.start("CHILD1");
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    statistic.end();
+    statistic.start("CHILD2");
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    statistic.end();
+    statistic.reset();
+    statistic.end();
+
+    double duration_root = statistic.event("ROOT").duration;
+    double duration_child1 = statistic.event("ROOT").children["CHILD1"]->duration;
+    double duration_child2 = statistic.event("ROOT").children["CHILD2"]->duration;
+
+    REQUIRE(duration_child1 == 0.0);
+    REQUIRE(duration_child2 == 0.0);
+  }
 }
