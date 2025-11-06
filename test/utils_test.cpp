@@ -144,5 +144,5 @@ TEST_CASE("Timing") {
 
     REQUIRE(duration_child1 == 0.0);
     REQUIRE(duration_child2 == 0.0);
-  } 
+  }
 }
