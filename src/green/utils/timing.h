@@ -158,7 +158,7 @@ namespace green::utils {
      * @param name - event name to start time measurement
      * @param accumulate - whether to accumulate time for this event
      */
-    void start(const std::string& name, bool accumulate=false) {
+    void start(const std::string& name, bool accumulate=true) {
 #ifndef NDEBUG
       if (_root_events.find(name) != _root_events.end() && _root_events[name]->active) {
         throw wrong_event_state("Event is already active");
