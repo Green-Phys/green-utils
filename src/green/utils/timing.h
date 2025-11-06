@@ -205,7 +205,7 @@ namespace green::utils {
     /**
      * @brief reset the `duration` and `active` status of the given event and all its children
      * 
-     * @param event 
+     * @param event The event to reset along with all its children.
      */
     void reset_event_and_children(event_t& event) {
       event.duration = 0.0;
