@@ -135,7 +135,7 @@ TEST_CASE("Timing") {
     statistic.start("CHILD2");
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     statistic.end();
-    statistic.reset();
+    statistic.reset(); // reset during active ROOT event only resets its children
     statistic.end();
 
     double duration_root = statistic.event("ROOT").duration;
@@ -144,5 +144,10 @@ TEST_CASE("Timing") {
 
     REQUIRE(duration_child1 == 0.0);
     REQUIRE(duration_child2 == 0.0);
+    REQUIRE(duration_root > 0.0);
+
+    statistic.reset(); // reset at root level resets all events
+    duration_root = statistic.event("ROOT").duration;
+    REQUIRE(duration_root == 0.0);
   }
 }

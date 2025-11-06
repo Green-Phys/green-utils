@@ -202,17 +202,34 @@ namespace green::utils {
 
     }
 
+    /**
+     * @brief reset the `duration` and `active` status of the given event and all its children
+     * 
+     * @param event 
+     */
+    void reset_event_and_children(event_t& event) {
+      event.duration = 0.0;
+      event.active   = false;
+      for (auto& child_kv : event.children) {
+        reset_event_and_children(*child_kv.second);
+      }
+    }
 
     /**
-     * @brief reset the `duration` attribute of all child events of the current event
+     * @brief reset the `duration` and `active` status of all the children events
+     * of the current event
      * If there is no current event (i.e., at the root level when `_current_event` is nullptr),
-     * this method returns silently and does nothing.
+     * this method resets all root events and their children.
      */
     void reset() {
-      if (!_current_event) return;
+      if (!_current_event) {
+        for (auto& kv : _root_events) {
+          reset_event_and_children(*kv.second);
+        }
+        return;
+      }
       for (auto& kv : _current_event->children) {
-        kv.second->duration = 0.0;
-        kv.second->active   = false;
+        reset_event_and_children(*kv.second);
       }
     }
 
