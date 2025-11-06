@@ -38,7 +38,7 @@ namespace green::utils {
 
   struct event_t {
     event_t() : start(0), duration(0), active(false), accumulate(true) {}
-    event_t(double start_, double duration_) : start(start_), duration(duration_), active(false){};
+    event_t(double start_, double duration_, bool accumulate_) : start(start_), duration(duration_), active(false), accumulate(accumulate_){};
     double                                                    start;
     double                                                    duration;
     bool                                                      active;
