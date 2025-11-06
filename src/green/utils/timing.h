@@ -42,7 +42,7 @@ namespace green::utils {
     double                                                    start;
     double                                                    duration;
     bool                                                      active;
-    bool                                                      accumulate;
+    bool                                                      accumulate; // accumulate time for subsequent measurements
     event_t*                                                  parent = nullptr;
     std::unordered_map<std::string, std::unique_ptr<event_t>> children;
   };
@@ -130,6 +130,20 @@ namespace green::utils {
     timing(timing const&)         = delete;
     void operator=(timing const&) = delete;
 
+    /**
+     * @brief Register a root-level timing event by name without starting it.
+     *
+     * Creates the event entry in the internal root events map if it does not exist yet.
+     * This call is idempotent and has no effect if the event is already present.
+     *
+     * Notes:
+     * - This does not start timing. Use start(name) to begin measuring and end() to stop.
+     * - Added events appear in print()/print(MPI_Comm) output even if never started (duration = 0).
+     * - The event is registered at the root level; child events are created implicitly when
+     *   start(name) is invoked while another event is active.
+     *
+     * @param name Unique identifier of the event to pre-register at the root level.
+     */
     void add(const std::string& name) {
       if (_root_events.find(name) == _root_events.end()) {
         _root_events[name] = std::make_unique<event_t>(0.0, 0.0);
@@ -188,6 +202,10 @@ namespace green::utils {
     }
 
 
+    /**
+     * @brief reset the `duration` attribute of all child events of the current event
+     * 
+     */
     void reset() {
       if (!_current_event) return;
       for (auto& kv : _current_event->children) {
