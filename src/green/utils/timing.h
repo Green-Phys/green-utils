@@ -205,7 +205,8 @@ namespace green::utils {
 
     /**
      * @brief reset the `duration` attribute of all child events of the current event
-     * 
+     * If there is no current event (i.e., at the root level when `_current_event` is nullptr),
+     * this method returns silently and does nothing.
      */
     void reset() {
       if (!_current_event) return;

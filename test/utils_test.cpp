@@ -111,7 +111,7 @@ TEST_CASE("Timing") {
     statistic.end();
     double e2 = MPI_Wtime();
     double duration2 = statistic.event("ACCUMULATE ON").duration;
-    REQUIRE(std::abs(duration2 - (e2 + e1 - s1 - s2)) < 1e-2);
+    REQUIRE(std::abs(duration2 - ((e2 - s2) + (e1 - s1))) < 1e-2);
 
     // Test case when Accumulate is OFF
     statistic.start("ACCUMULATE OFF", false);
