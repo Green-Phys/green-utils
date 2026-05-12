@@ -28,10 +28,10 @@
 #include "green/utils/mpi_shared.h"
 
 TEST_CASE ("Test Context without MPI_Init") {
-  REQUIRE(green::utils::context.global_rank == 0);
-  REQUIRE(green::utils::context.global_size == 1);
-  REQUIRE(green::utils::context.node_rank == 0);
-  REQUIRE(green::utils::context.node_size == 1);
-  REQUIRE(green::utils::context.internode_rank == 0);
-  REQUIRE(green::utils::context.internode_size == 1);
+  REQUIRE(green::utils::context().global_rank == 0);
+  REQUIRE(green::utils::context().global_size == 1);
+  REQUIRE(green::utils::context().node_rank == 0);
+  REQUIRE(green::utils::context().node_size == 1);
+  REQUIRE(green::utils::context().internode_rank == 0);
+  REQUIRE(green::utils::context().internode_size == 1);
 }

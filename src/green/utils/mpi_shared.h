@@ -104,7 +104,7 @@ namespace green::utils {
     [[nodiscard]] const mpi_context& cntx() const { return _cntx; }
   };
 
-#define context mpi_context::context()
+  inline mpi_context& context() { return mpi_context::context(); }
 }  // namespace green::utils
 
 #endif  // GREEN_UTILS_MPI_SHARED_H
