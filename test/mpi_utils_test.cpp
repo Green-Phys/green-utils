@@ -134,15 +134,15 @@ TEST_CASE("MPI") {
     double*  data;
     MPI_Aint buffer_size = 1000 * sizeof(double);
     MPI_Win  shared_win;
-    green::utils::setup_mpi_shared_memory(&data, buffer_size, shared_win, green::utils::context.node_comm,
-                                          green::utils::context.node_rank);
+    green::utils::setup_mpi_shared_memory(&data, buffer_size, shared_win, green::utils::context().node_comm,
+                                          green::utils::context().node_rank);
     MPI_Win_fence(0, shared_win);
-    if (!green::utils::context.node_rank) {
+    if (!green::utils::context().node_rank) {
       std::fill(data, data + 999, 0.0);
       data[0] = 10.0;
     }
     MPI_Win_fence(0, shared_win);
-    if (green::utils::context.node_rank) REQUIRE(std::abs(data[0] - 10) < 1e-12);
+    if (green::utils::context().node_rank) REQUIRE(std::abs(data[0] - 10) < 1e-12);
   }
 
   SECTION("Broadcast") {
