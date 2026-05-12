@@ -34,8 +34,8 @@ void run_test_on_shared(green::utils::shared_object<T>& shared, size_t data_size
   size_t total_size = 0;
   size_t local_size = shared.local_size();
   MPI_Reduce(&local_size, &total_size, 1, green::utils::mpi_type<size_t>::type, MPI_SUM, 0, shared.cntx().node_comm);
-  std::cout<<green::utils::mpi_context::context.global_rank<<":"<<shared.cntx().global_rank<<" "<<shared.cntx().global_size<<" "<<shared.cntx().node_rank<<" "<<shared.cntx().node_size<<" "<<shared.cntx().internode_rank<<" "<<shared.cntx().internode_size<<std::endl;
-  std::cout<<green::utils::mpi_context::context.global_rank<<":"<<"sizes: "<<local_size<<" " <<total_size<<" "<<data_size<<std::endl;
+  std::cout<<green::utils::mpi_context::context().global_rank<<":"<<shared.cntx().global_rank<<" "<<shared.cntx().global_size<<" "<<shared.cntx().node_rank<<" "<<shared.cntx().node_size<<" "<<shared.cntx().internode_rank<<" "<<shared.cntx().internode_size<<std::endl;
+  std::cout<<green::utils::mpi_context::context().global_rank<<":"<<"sizes: "<<local_size<<" " <<total_size<<" "<<data_size<<std::endl;
   if (!shared.cntx().node_rank) {
     REQUIRE(total_size == data_size);
   }
@@ -73,19 +73,19 @@ TEST_CASE("MPI") {
   }
 
   SECTION("Intra-node split") {
-    MPI_Comm global      = green::utils::mpi_context::context.global;
-    int      global_rank = green::utils::mpi_context::context.global_rank;
+    MPI_Comm global      = green::utils::mpi_context::context().global;
+    int      global_rank = green::utils::mpi_context::context().global_rank;
     MPI_Comm shared;
     int      shared_rank;
     int      shared_size;
     green::utils::setup_intranode_communicator(global, global_rank, shared, shared_rank, shared_size);
-    REQUIRE(shared_size == green::utils::mpi_context::context.node_size);
-    REQUIRE(shared_rank == green::utils::mpi_context::context.node_rank);
+    REQUIRE(shared_size == green::utils::mpi_context::context().node_size);
+    REQUIRE(shared_rank == green::utils::mpi_context::context().node_rank);
   }
 
   SECTION("Inter-node split") {
-    MPI_Comm global      = green::utils::mpi_context::context.global;
-    int      global_rank = green::utils::mpi_context::context.global_rank;
+    MPI_Comm global      = green::utils::mpi_context::context().global;
+    int      global_rank = green::utils::mpi_context::context().global_rank;
     MPI_Comm shared;
     int      shared_rank;
     int      shared_size;
@@ -104,9 +104,9 @@ TEST_CASE("MPI") {
   }
 
   SECTION("Emulate Device split") {
-    MPI_Comm global      = green::utils::mpi_context::context.global;
-    int      global_rank = green::utils::mpi_context::context.global_rank;
-    int      global_size = green::utils::mpi_context::context.global_size;
+    MPI_Comm global      = green::utils::mpi_context::context().global;
+    int      global_rank = green::utils::mpi_context::context().global_rank;
+    int      global_size = green::utils::mpi_context::context().global_size;
     MPI_Comm shared;
     int      shared_rank;
     int      shared_size;
@@ -176,7 +176,7 @@ TEST_CASE("MPI") {
 
   SECTION("Shared wrapper custom context") {
     green::utils::mpi_context cntx(MPI_COMM_SELF);
-    std::cout<<green::utils::mpi_context::context.global_rank<<":"<<cntx.global_rank<<" "<<cntx.global_size<<" "<<cntx.node_rank<<" "<<cntx.node_size<<" "<<cntx.internode_rank<<" "<<cntx.internode_size<<std::endl;
+    std::cout<<green::utils::mpi_context::context().global_rank<<":"<<cntx.global_rank<<" "<<cntx.global_size<<" "<<cntx.node_rank<<" "<<cntx.node_size<<" "<<cntx.internode_rank<<" "<<cntx.internode_size<<std::endl;
     size_t array_size = 1003;
     SECTION("RValue array") {
       green::utils::shared_object shared_r(ref_array<double>{array_size}, cntx);
@@ -189,8 +189,8 @@ TEST_CASE("MPI") {
   }
 
   SECTION("AllReduce") {
-    MPI_Comm            global        = green::utils::mpi_context::context.global;
-    int                 global_size   = green::utils::mpi_context::context.global_size;
+    MPI_Comm            global        = green::utils::mpi_context::context().global;
+    int                 global_size   = green::utils::mpi_context::context().global_size;
     size_t              _nso          = 20;
     MPI_Datatype        dt_matrix     = green::utils::create_matrix_datatype<double>(_nso * _nso);
     MPI_Op              matrix_sum_op = green::utils::create_matrix_operation<double>();
@@ -201,8 +201,8 @@ TEST_CASE("MPI") {
   }
 
   SECTION("AllReduce Std Complex") {
-    MPI_Comm                          global        = green::utils::mpi_context::context.global;
-    int                               global_size   = green::utils::mpi_context::context.global_size;
+    MPI_Comm                          global        = green::utils::mpi_context::context().global;
+    int                               global_size   = green::utils::mpi_context::context().global_size;
     size_t                            _nso          = 20;
     MPI_Datatype                      dt_matrix     = green::utils::create_matrix_datatype<std::complex<double>>(_nso * _nso);
     MPI_Op                            matrix_sum_op = green::utils::create_matrix_operation<std::complex<double>>();
@@ -218,15 +218,15 @@ TEST_CASE("MPI") {
     green::utils::timing statistic;
     double               s = MPI_Wtime();
     statistic.start("START");
-    if(!green::utils::mpi_context::context.global_rank) {
+    if(!green::utils::mpi_context::context().global_rank) {
       statistic.start("INNER");
       statistic.end();
     }
     statistic.start("INNER2");
     statistic.end();
     statistic.end();
-    if(green::utils::mpi_context::context.global_rank) REQUIRE(statistic.event("START").children.size() == 1);
+    if(green::utils::mpi_context::context().global_rank) REQUIRE(statistic.event("START").children.size() == 1);
     statistic.print(MPI_COMM_WORLD);
-    if(green::utils::mpi_context::context.global_rank) REQUIRE(statistic.event("START").children.size() == 2);
+    if(green::utils::mpi_context::context().global_rank) REQUIRE(statistic.event("START").children.size() == 2);
   }
 }
