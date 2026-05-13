@@ -15,16 +15,16 @@ as follows.
 
 ```cpp
 // Acccess to global communicator
-MPI_Comm global = mpi_context::context.global;
+MPI_Comm global = mpi_context::context().global;
 
 // Access to a size of a global communicator
-int size = mpi_context::context.global_size;
+int size = mpi_context::context().global_size;
 
 // Acccess to a communicator local to a current node
-MPI_Comm node = mpi_context::context.node_comm;
+MPI_Comm node = mpi_context::context().node_comm;
 
 // Rank of the current cpu in the communicator local to a current node 
-int node_rank = mpi_context::context.node_rank;
+int node_rank = mpi_context::context().node_rank;
 ```
 
 ***
